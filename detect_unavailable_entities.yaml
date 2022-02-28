@@ -1,0 +1,111 @@
+blueprint:
+  name: Detect unavailable entities
+  description: Regularly test selected entities status to check for unavailability.
+  domain: automation
+  input:
+    time:
+      name: Time to test on
+      description: Test is run at configured time
+      default: "10:00:00"
+      selector:
+        time:
+    monday_enabled:
+      name: Monday
+      description: Run test on Monday
+      default: true
+      selector:
+        boolean:
+    tuesday_enabled:
+      name: Tuesday
+      description: Run test on Tuesday
+      default: true
+      selector:
+        boolean:
+    wednesday_enabled:
+      name: Wednesday
+      description: Run test on Wednesday
+      default: true
+      selector:
+        boolean:
+    thursday_enabled:
+      name: Thursday
+      description: Run test on Thursday
+      default: true
+      selector:
+        boolean:
+    friday_enabled:
+      name: Friday
+      description: Run test on Friday
+      default: true
+      selector:
+        boolean:
+    saturday_enabled:
+      name: Saturday
+      description: Run test on Saturday
+      default: true
+      selector:
+        boolean:
+    sunday_enabled:
+      name: Sunday
+      description: Run test on Sunday
+      default: true
+      selector:
+        boolean:
+    entities:
+      name: Entities
+      description: Entities to check
+      default: {}
+      selector:
+        target: {}
+    actions:
+      name: Actions
+      description:
+        Notifications or similar to be run. {{entities}} is replaced with
+        the names of unavailable entities.
+      selector:
+        action:
+variables:
+  monday_enabled: !input "monday_enabled"
+  tuesday_enabled: !input "tuesday_enabled"
+  wednesday_enabled: !input "wednesday_enabled"
+  thursday_enabled: !input "thursday_enabled"
+  friday_enabled: !input "friday_enabled"
+  saturday_enabled: !input "saturday_enabled"
+  sunday_enabled: !input "sunday_enabled"
+  current_day: "{{ now().weekday() | int }}"
+  include_entities: !input "entities"
+  entities: >
+    {% set result = namespace(entities=[],currLabel="") %}
+    {% for ent in include_entities.entity_id %}
+      {% if is_state(ent, 'unavailable') %}
+        {% if state_attr(ent, 'friendly_name') == None %}
+          {% set result.currLabel = ent %}
+        {% else %}
+          {% set result.currLabel = state_attr(ent, 'friendly_name') %}
+        {% endif %}
+        {% set result.entities = result.entities + [result.currLabel] %}
+      {% endif %}
+    {% endfor %}
+    {{result.entities|join(',')}}
+trigger:
+  - platform: time
+    at: !input "time"
+condition:
+  - condition: template
+    value_template: >
+      {{ 
+        (current_day == 0 and monday_enabled) or
+        (current_day == 1 and tuesday_enabled) or 
+        (current_day == 2 and wednesday_enabled) or
+        (current_day == 3 and thursday_enabled) or 
+        (current_day == 4 and friday_enabled) or
+        (current_day == 5 and saturday_enabled) or
+        (current_day == 6 and sunday_enabled)
+      }}
+  - condition: template
+    value_template: "{{ entities|trim|count > 0}}"
+action:
+  - choose: []
+    default: !input "actions"
+mode: single
+max_exceeded: silent
