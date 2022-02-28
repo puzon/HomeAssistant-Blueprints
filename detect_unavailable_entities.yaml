@@ -74,7 +74,7 @@ variables:
   sunday_enabled: !input "sunday_enabled"
   current_day: "{{ now().weekday() | int }}"
   include_entities: !input "entities"
-  entities: >
+  entities: >-
     {% set result = namespace(entities=[],currLabel="") %}
     {% for ent in include_entities.entity_id %}
       {% if is_state(ent, 'unavailable') %}
@@ -103,7 +103,7 @@ condition:
         (current_day == 6 and sunday_enabled)
       }}
   - condition: template
-    value_template: "{{ entities|trim|count > 0}}"
+    value_template: "{{ entities|count > 0}}"
 action:
   - choose: []
     default: !input "actions"
